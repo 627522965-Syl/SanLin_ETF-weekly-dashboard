@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三林ETF系列 · 周度数据看板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1116;
+    --bg-alt:#141920;
+    --surface:#181E27;
+    --surface-2:#1F2731;
+    --border:#2A3340;
+    --border-soft:#232B36;
+    --text:#EBEEF2;
+    --text-dim:#8D9AAB;
+    --text-faint:#5C6779;
+    --gold:#C9A15C;
+    --gold-soft:#8A7548;
+    --up:#E0524F;      /* 中国行情习惯：红涨 */
+    --up-bg:rgba(224,82,79,0.12);
+    --down:#33A66B;    /* 绿跌 */
+    --down-bg:rgba(51,166,107,0.12);
+    --flat:#8D9AAB;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:"Noto Sans SC","Space Grotesk",-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  body{background-image:radial-gradient(circle at 15% 0%, rgba(201,161,92,0.06), transparent 40%),
+    radial-gradient(circle at 85% 10%, rgba(224,82,79,0.04), transparent 35%);
+    background-attachment:fixed;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px;}
+  .num{font-family:"JetBrains Mono",monospace;}
+
+  /* ===== Header ===== */
+  .hero{padding:56px 0 36px;border-bottom:1px solid var(--border-soft);position:relative;}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:0.18em;color:var(--gold);
+    text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+  .eyebrow::before{content:"";width:22px;height:1px;background:var(--gold);display:inline-block;}
+  h1{font-family:"Noto Serif SC",serif;font-weight:700;font-size:38px;line-height:1.25;margin:0 0 12px;
+    letter-spacing:0.01em;}
+  h1 span{color:var(--gold);}
+  .hero-sub{color:var(--text-dim);font-size:15px;line-height:1.75;max-width:720px;margin:0 0 26px;}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:10px;}
+  .chip{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border);padding:6px 12px;border-radius:100px;background:var(--surface);}
+  .chip b{color:var(--text);font-weight:600;}
+
+  /* ===== Section headers ===== */
+  .section{padding-top:52px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;
+    flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border-soft);padding-bottom:16px;}
+  .section-title{display:flex;align-items:baseline;gap:12px;}
+  .section-index{font-family:"JetBrains Mono",monospace;color:var(--gold-soft);font-size:13px;}
+  .section-title h2{font-family:"Noto Serif SC",serif;font-size:24px;margin:0;font-weight:700;}
+  .section-desc{color:var(--text-faint);font-size:13px;max-width:420px;text-align:right;line-height:1.6;}
+
+  /* ===== ETF card ===== */
+  .etf-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    margin-bottom:22px;overflow:hidden;}
+  .etf-head{display:flex;align-items:center;justify-content:space-between;padding:22px 26px;
+    background:var(--bg-alt);border-bottom:1px solid var(--border-soft);flex-wrap:wrap;gap:16px;}
+  .etf-name-block{display:flex;align-items:center;gap:14px;}
+  .rank-badge{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-weight:700;font-size:16px;border:1px solid var(--border);
+    background:var(--surface-2);color:var(--gold);flex-shrink:0;}
+  .etf-name{font-family:"Noto Serif SC",serif;font-size:20px;font-weight:700;}
+  .etf-tag{font-size:12px;color:var(--text-faint);font-family:"JetBrains Mono",monospace;margin-top:2px;}
+  .etf-stats{display:flex;gap:26px;flex-wrap:wrap;}
+  .stat{text-align:right;}
+  .stat-label{font-size:11px;color:var(--text-faint);font-family:"JetBrains Mono",monospace;
+    text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .stat-val{font-family:"JetBrains Mono",monospace;font-size:19px;font-weight:700;}
+  .up{color:var(--up);} .down{color:var(--down);} .flat-c{color:var(--flat);}
+
+  .etf-body{padding:24px 26px 26px;display:grid;grid-template-columns:1.35fr 1fr;gap:28px;}
+  @media (max-width:820px){.etf-body{grid-template-columns:1fr;}}
+
+  table.holdings{width:100%;border-collapse:collapse;font-size:13px;}
+  table.holdings th{text-align:left;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;
+    padding:0 8px 8px 0;border-bottom:1px solid var(--border-soft);}
+  table.holdings td{padding:9px 8px 9px 0;border-bottom:1px solid var(--border-soft);}
+  table.holdings tr:last-child td{border-bottom:none;}
+  table.holdings td.right,table.holdings th.right{text-align:right;}
+  .hname{font-weight:600;}
+  .hweight-bar{height:3px;background:var(--surface-2);border-radius:2px;margin-top:5px;overflow:hidden;width:60px;}
+  .hweight-fill{height:100%;background:var(--gold-soft);}
+
+  .side-col{display:flex;flex-direction:column;gap:16px;}
+  .spark-box{background:var(--bg-alt);border:1px solid var(--border-soft);border-radius:10px;padding:16px;}
+  .spark-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .spark-box-head span{font-size:11px;color:var(--text-faint);font-family:"JetBrains Mono",monospace;
+    text-transform:uppercase;}
+  .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .metric-tile{background:var(--bg-alt);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
+  .metric-tile .m-label{font-size:11px;color:var(--text-faint);font-family:"JetBrains Mono",monospace;margin-bottom:5px;}
+  .metric-tile .m-val{font-family:"JetBrains Mono",monospace;font-size:17px;font-weight:700;}
+
+  .analysis-box{background:var(--bg-alt);border:1px solid var(--border-soft);border-radius:10px;padding:16px 18px;}
+  .analysis-box .a-title{font-size:12px;color:var(--gold);font-family:"JetBrains Mono",monospace;
+    text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
+  .analysis-box p{margin:0 0 8px;font-size:13.5px;line-height:1.75;color:var(--text-dim);}
+  .analysis-box p:last-child{margin-bottom:0;}
+  .analysis-box b{color:var(--text);font-weight:600;}
+  .news-tag{display:inline-block;font-size:11px;background:var(--surface-2);border:1px solid var(--border);
+    color:var(--text-dim);padding:2px 9px;border-radius:100px;margin:2px 4px 2px 0;font-family:"JetBrains Mono",monospace;}
+
+  .verdict-strip{display:flex;gap:10px;padding:14px 26px;background:var(--bg-alt);
+    border-top:1px solid var(--border-soft);align-items:center;flex-wrap:wrap;}
+  .verdict-label{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--text-faint);
+    text-transform:uppercase;letter-spacing:0.05em;}
+  .verdict-text{font-size:13.5px;color:var(--text);font-weight:500;}
+
+  /* ===== market context ===== */
+  .market-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px;}
+  @media (max-width:820px){.market-grid{grid-template-columns:1fr;}}
+  .market-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .market-card h3{font-family:"Noto Serif SC",serif;font-size:16px;margin:0 0 10px;color:var(--gold);}
+  .market-card p{font-size:13.5px;color:var(--text-dim);line-height:1.75;margin:0;}
+  .market-card p+p{margin-top:8px;}
+
+  /* ===== comparison table ===== */
+  .compare-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  table.compare{width:100%;border-collapse:collapse;}
+  table.compare th{background:var(--bg-alt);text-align:left;font-family:"JetBrains Mono",monospace;
+    font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;
+    padding:14px 16px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.compare th.right,table.compare td.right{text-align:right;}
+  table.compare td{padding:15px 16px;border-bottom:1px solid var(--border-soft);font-size:14px;
+    font-family:"JetBrains Mono",monospace;}
+  table.compare tr:last-child td{border-bottom:none;}
+  table.compare td.name{font-family:"Noto Sans SC",sans-serif;font-weight:600;font-size:14px;
+    display:flex;align-items:center;gap:10px;}
+  .medal{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;flex-shrink:0;}
+  .medal-1{background:rgba(201,161,92,0.18);color:var(--gold);border:1px solid rgba(201,161,92,0.4);}
+  .medal-2{background:rgba(141,154,171,0.15);color:#B9C2CE;border:1px solid rgba(141,154,171,0.35);}
+  .medal-3{background:rgba(141,154,171,0.1);color:#8D9AAB;border:1px solid var(--border);}
+  .medal-4{background:rgba(224,82,79,0.08);color:#C77B79;border:1px solid var(--border);}
+  .medal-5{background:rgba(224,82,79,0.12);color:var(--up);border:1px solid rgba(224,82,79,0.3);}
+  .best{position:relative;}
+  .best::after{content:"最优";font-size:9px;font-family:"JetBrains Mono",monospace;color:var(--down);
+    display:block;margin-top:2px;}
+  .worst::after{content:"最弱";font-size:9px;font-family:"JetBrains Mono",monospace;color:var(--up);
+    display:block;margin-top:2px;}
+
+  /* ===== recommendations ===== */
+  .reco-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:820px){.reco-grid{grid-template-columns:1fr;}}
+  .reco-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;
+    border-left:3px solid var(--gold-soft);}
+  .reco-card.urgent{border-left-color:var(--up);}
+  .reco-card h4{margin:0 0 8px;font-size:15px;font-family:"Noto Serif SC",serif;display:flex;
+    align-items:center;gap:8px;}
+  .reco-card p{margin:0;font-size:13.5px;color:var(--text-dim);line-height:1.75;}
+  .reco-card p+p{margin-top:8px;}
+
+  .closing{margin-top:44px;padding:22px 26px;background:linear-gradient(135deg,rgba(201,161,92,0.08),rgba(201,161,92,0.02));
+    border:1px solid rgba(201,161,92,0.25);border-radius:14px;}
+  .closing p{margin:0;font-size:13.5px;color:var(--text-dim);line-height:1.8;}
+  .closing b{color:var(--gold);}
+
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--border-soft);
+    font-size:11.5px;color:var(--text-faint);font-family:"JetBrains Mono",monospace;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="eyebrow">模拟交易 · 周度复盘看板</div>
+    <h1>三林 ETF 系列 <span>5组持仓</span> 全景对比</h1>
+    <p class="hero-sub">
+      5只组合于 2026-08-06 / 08-07 建仓，除「朱投」外均未发生调仓操作。本看板汇总各组合持仓明细、
+      成立以来核心指标、本周市场与个股消息面，并给出横向排名与操作建议。
+    </p>
+    <div class="hero-meta">
+      <div class="chip">观察区间 <b>08-06 → 08-14</b></div>
+      <div class="chip">组合数 <b>5</b></div>
+      <div class="chip">大盘本周 <b class="up">超跌反弹 / 高位分化</b></div>
+      <div class="chip">数据来源 <b>东方财富模拟交易</b></div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: HOLDINGS -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="section-index">01</span><h2>持仓明细 · 逐组复盘</h2></div>
+      <div class="section-desc">按成立以来收益率排序，含持仓结构、成立以来指标与本周消息面点评</div>
+    </div>
+
+    <!-- 杨斌 -->
+    <div class="etf-card">
+      <div class="etf-head">
+        <div class="etf-name-block">
+          <div class="rank-badge">1</div>
+          <div><div class="etf-name">三林 etf 杨斌</div><div class="etf-tag">9 只持仓 · 通信设备主导</div></div>
+        </div>
+        <div class="etf-stats">
+          <div class="stat"><div class="stat-label">收益率</div><div class="stat-val up">+2.69%</div></div>
+          <div class="stat"><div class="stat-label">胜率</div><div class="stat-val">66.67%</div></div>
+          <div class="stat"><div class="stat-label">最大回撤</div><div class="stat-val down">0.72%</div></div>
+          <div class="stat"><div class="stat-label">夏普比率</div><div class="stat-val up">0.37</div></div>
+        </div>
+      </div>
+      <div class="etf-body">
+        <table class="holdings">
+          <thead><tr><th>持仓</th><th class="right">仓位</th><th class="right">持仓盈亏</th><th class="right">今日盈亏</th></tr></thead>
+          <tbody>
+            <tr><td><div class="hname">剑桥科技</div><div class="hweight-bar"><div class="hweight-fill" style="width:96%"></div></div></td><td class="right num">14.48%</td><td class="right num up">+17.37%</td><td class="right num up">+13,520</td></tr>
+            <tr><td><div class="hname">中海油服</div><div class="hweight-bar"><div class="hweight-fill" style="width:100%"></div></div></td><td class="right num">15.06%</td><td class="right num down">-1.43%</td><td class="right num up">+130</td></tr>
+            <tr><td><div class="hname">迈瑞医疗</div><div class="hweight-bar"><div class="hweight-fill" style="width:97%"></div></div></td><td class="right num">14.65%</td><td class="right num up">+0.03%</td><td class="right num down">-2,920</td></tr>
+            <tr><td><div class="hname">中天科技</div><div class="hweight-bar"><div class="hweight-fill" style="width:76%"></div></div></td><td class="right num">11.42%</td><td class="right num up">+5.01%</td><td class="right num up">+8,745</td></tr>
+            <tr><td><div class="hname">银之杰</div><div class="hweight-bar"><div class="hweight-fill" style="width:63%"></div></div></td><td class="right num">9.45%</td><td class="right num down">-2.26%</td><td class="right num down">-480</td></tr>
+            <tr><td><div class="hname">雅克科技</div><div class="hweight-bar"><div class="hweight-fill" style="width:69%"></div></div></td><td class="right num">10.31%</td><td class="right num up">+0.86%</td><td class="right num up">+1,204</td></tr>
+            <tr><td><div class="hname">中兴通讯</div><div class="hweight-bar"><div class="hweight-fill" style="width:59%"></div></div></td><td class="right num">8.87%</td><td class="right num up">+0.88%</td><td class="right num down">-78</td></tr>
+            <tr><td><div class="hname">英维克</div><div class="hweight-bar"><div class="hweight-fill" style="width:52%"></div></div></td><td class="right num">7.78%</td><td class="right num up">+2.80%</td><td class="right num up">+2,296</td></tr>
+            <tr><td><div class="hname">五洲新春</div><div class="hweight-bar"><div class="hweight-fill" style="width:50%"></div></div></td><td class="right num">7.53%</td><td class="right num down">-0.19%</td><td class="right num down">-784</td></tr>
+          </tbody>
+        </table>
+        <div class="side-col">
+          <div class="spark-box">
+            <div class="spark-box-head"><span>净值曲线 08-07→08-14</span><span class="up">1.027</span></div>
+            <svg viewBox="0 0 300 80" width="100%" height="70" preserveAspectRatio="none">
+              <polyline points="0,64.7 60,73 120,75 180,38 240,50.3 300,5" fill="none" stroke="#E0524F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="analysis-box">
+            <div class="a-title">本周消息面</div>
+            <p><b>剑桥科技</b>属光模块/CPO板块，本周该板块因"美国拟限制光模块进口"传闻多次大幅波动（8/5单日跌超6%又反弹超10%），但剑桥科技凭借强势资金关注度逆势收出组合内最大浮盈 <b class="up">+17.37%</b>。<b>中天科技</b>同为通信线缆方向，今日单票贡献 <b class="up">+8,745</b> 元。</p>
+            <div class="news-tag">CPO光模块 传闻反复</div><div class="news-tag">中报业绩期</div><div class="news-tag">资金分歧大</div>
+          </div>
+        </div>
+      </div>
+      <div class="verdict-strip">
+        <span class="verdict-label">点评</span>
+        <span class="verdict-text">走势最平稳、回撤最小、夏普最高，目前风险调整后表现<b class="up">排名第一</b>，建议维持不动。</span>
+      </div>
+    </div>
+
+    <!-- 王婷 -->
+    <div class="etf-card">
+      <div class="etf-head">
+        <div class="etf-name-block">
+          <div class="rank-badge">2</div>
+          <div><div class="etf-name">三林 etf 王婷</div><div class="etf-tag">7 只持仓 · 行业分散均匀</div></div>
+        </div>
+        <div class="etf-stats">
+          <div class="stat"><div class="stat-label">收益率</div><div class="stat-val up">+2.70%</div></div>
+          <div class="stat"><div class="stat-label">胜率</div><div class="stat-val">71.43%</div></div>
+          <div class="stat"><div class="stat-label">最大回撤</div><div class="stat-val down">2.06%</div></div>
+          <div class="stat"><div class="stat-label">夏普比率</div><div class="stat-val up">0.21</div></div>
+        </div>
+      </div>
+      <div class="etf-body">
+        <table class="holdings">
+          <thead><tr><th>持仓</th><th class="right">仓位</th><th class="right">持仓盈亏</th><th class="right">今日盈亏</th></tr></thead>
+          <tbody>
+            <tr><td><div class="hname">麦格米特</div><div class="hweight-bar"><div class="hweight-fill" style="width:100%"></div></div></td><td class="right num">19.19%</td><td class="right num up">+3.86%</td><td class="right num down">-690</td></tr>
+            <tr><td><div class="hname">永鼎股份</div><div class="hweight-bar"><div class="hweight-fill" style="width:98%"></div></div></td><td class="right num">18.92%</td><td class="right num up">+4.71%</td><td class="right num up">+2,679</td></tr>
+            <tr><td><div class="hname">深科技</div><div class="hweight-bar"><div class="hweight-fill" style="width:82%"></div></div></td><td class="right num">15.67%</td><td class="right num down">-1.67%</td><td class="right num up">+2,720</td></tr>
+            <tr><td><div class="hname">杭电股份</div><div class="hweight-bar"><div class="hweight-fill" style="width:62%"></div></div></td><td class="right num">11.93%</td><td class="right num up">+8.12%</td><td class="right num up">+11,152</td></tr>
+            <tr><td><div class="hname">翔鹭钨业</div><div class="hweight-bar"><div class="hweight-fill" style="width:60%"></div></div></td><td class="right num">11.60%</td><td class="right num up">+4.64%</td><td class="right num down">-240</td></tr>
+            <tr><td><div class="hname">利欧股份</div><div class="hweight-bar"><div class="hweight-fill" style="width:59%"></div></div></td><td class="right num">11.42%</td><td class="right num up">+0.65%</td><td class="right num down">-5,060</td></tr>
+            <tr><td><div class="hname">浦发银行</div><div class="hweight-bar"><div class="hweight-fill" style="width:58%"></div></div></td><td class="right num">11.08%</td><td class="right num down">-1.40%</td><td class="right num down">-1,000</td></tr>
+          </tbody>
+        </table>
+        <div class="side-col">
+          <div class="spark-box">
+            <div class="spark-box-head"><span>净值曲线 08-07→08-14</span><span class="up">1.027</span></div>
+            <svg viewBox="0 0 300 80" width="100%" height="70" preserveAspectRatio="none">
+              <polyline points="0,45.83 60,54.58 120,75 180,10.83 240,19.58 300,5" fill="none" stroke="#E0524F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="analysis-box">
+            <div class="a-title">本周消息面</div>
+            <p><b>翔鹭钨业</b>受益于小金属（钨）板块整体走强——同期<b>中钨高新</b>因半年报净利润同比暴增261%-325%、叠加AI拉动PCB钻针需求，8/10单日涨停式拉升，带动板块联动，翔鹭钨业同步走高。<b>杭电股份</b>（电网设备）今日单日贡献全组合超八成盈利，是典型的"一票独大"行情。</p>
+            <div class="news-tag">小金属/钨价走强</div><div class="news-tag">电网设备脉冲</div><div class="news-tag">银行板块回调</div>
+          </div>
+        </div>
+      </div>
+      <div class="verdict-strip">
+        <span class="verdict-label">点评</span>
+        <span class="verdict-text">胜率最高、行业分布最分散，稳健性<b class="up">排名第二</b>，持仓健康度好，可维持观察。</span>
+      </div>
+    </div>
+
+    <!-- 错觉 -->
+    <div class="etf-card">
+      <div class="etf-head">
+        <div class="etf-name-block">
+          <div class="rank-badge">3</div>
+          <div><div class="etf-name">三林 etf 错觉</div><div class="etf-tag">8 只持仓 · 工业金属+小金属集中</div></div>
+        </div>
+        <div class="etf-stats">
+          <div class="stat"><div class="stat-label">收益率</div><div class="stat-val up">+2.98%</div></div>
+          <div class="stat"><div class="stat-label">胜率</div><div class="stat-val">50.00%</div></div>
+          <div class="stat"><div class="stat-label">最大回撤</div><div class="stat-val down">3.33%</div></div>
+          <div class="stat"><div class="stat-label">夏普比率</div><div class="stat-val down">0.19</div></div>
+        </div>
+      </div>
+      <div class="etf-body">
+        <table class="holdings">
+          <thead><tr><th>持仓</th><th class="right">仓位</th><th class="right">持仓盈亏</th><th class="right">今日盈亏</th></tr></thead>
+          <tbody>
+            <tr><td><div class="hname">紫金矿业</div><div class="hweight-bar"><div class="hweight-fill" style="width:100%"></div></div></td><td class="right num">19.27%</td><td class="right num down">-6.00%</td><td class="right num up">+1,952</td></tr>
+            <tr><td><div class="hname">中钨高新</div><div class="hweight-bar"><div class="hweight-fill" style="width:96%"></div></div></td><td class="right num">18.57%</td><td class="right num up">+10.28%</td><td class="right num up">+4,452</td></tr>
+            <tr><td><div class="hname">天孚通信</div><div class="hweight-bar"><div class="hweight-fill" style="width:67%"></div></div></td><td class="right num">13.00%</td><td class="right num up">+20.47%</td><td class="right num up">+5,275</td></tr>
+            <tr><td><div class="hname">甬矽电子</div><div class="hweight-bar"><div class="hweight-fill" style="width:62%"></div></div></td><td class="right num">11.88%</td><td class="right num up">+2.34%</td><td class="right num down">-180</td></tr>
+            <tr><td><div class="hname">工业富联</div><div class="hweight-bar"><div class="hweight-fill" style="width:60%"></div></div></td><td class="right num">11.57%</td><td class="right num down">-3.76%</td><td class="right num up">+1,728</td></tr>
+            <tr><td><div class="hname">中国海油</div><div class="hweight-bar"><div class="hweight-fill" style="width:51%"></div></div></td><td class="right num">9.83%</td><td class="right num up">+6.97%</td><td class="right num up">+124</td></tr>
+            <tr><td><div class="hname">中金黄金</div><div class="hweight-bar"><div class="hweight-fill" style="width:44%"></div></div></td><td class="right num">8.48%</td><td class="right num down">-2.05%</td><td class="right num down">-144</td></tr>
+            <tr><td><div class="hname">北方华创</div><div class="hweight-bar"><div class="hweight-fill" style="width:37%"></div></div></td><td class="right num">7.17%</td><td class="right num down">-1.41%</td><td class="right num up">+6</td></tr>
+          </tbody>
+        </table>
+        <div class="side-col">
+          <div class="spark-box">
+            <div class="spark-box-head"><span>净值曲线 08-07→08-14</span><span class="up">1.030</span></div>
+            <svg viewBox="0 0 300 80" width="100%" height="70" preserveAspectRatio="none">
+              <polyline points="0,43 60,5 120,75 180,37 240,71 300,45" fill="none" stroke="#E0524F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="analysis-box">
+            <div class="a-title">本周消息面</div>
+            <p><b>天孚通信</b>本周经历"过山车"：8/5因"美国FCC拟禁光模块进口"传闻单日跌超4-6%，随后市场解读其属光器件而非模块商、受传导影响较小，资金迅速回补，浮盈冲至<b class="up">+20.47%</b>，是全部5组合中单票表现最强者。<b>紫金矿业</b>则相反——8/11在金铜价格高位回调、主力资金净流出18.4亿元的背景下单日暴跌6.4%，虽然公司基本面（一季度净利润同比+97.5%）仍强劲，但短期技术面严重承压，是本组合最大拖累。</p>
+            <div class="news-tag">CPO传闻反转</div><div class="news-tag">有色金属高位回调</div><div class="news-tag">半导体板块走弱</div>
+          </div>
+        </div>
+      </div>
+      <div class="verdict-strip">
+        <span class="verdict-label">点评</span>
+        <span class="verdict-text">收益率数字最高但靠两只重仓票拉动、胜率仅五成，属于"高收益低稳定性"，排名第三。</span>
+      </div>
+    </div>
+
+    <!-- 大蛮 -->
+    <div class="etf-card">
+      <div class="etf-head">
+        <div class="etf-name-block">
+          <div class="rank-badge">4</div>
+          <div><div class="etf-name">三林 etf 大蛮</div><div class="etf-tag">9 只持仓（含1只ETF）· 半导体权重最高</div></div>
+        </div>
+        <div class="etf-stats">
+          <div class="stat"><div class="stat-label">收益率</div><div class="stat-val up">+0.84%</div></div>
+          <div class="stat"><div class="stat-label">胜率</div><div class="stat-val">44.44%</div></div>
+          <div class="stat"><div class="stat-label">最大回撤</div><div class="stat-val down">2.26%</div></div>
+          <div class="stat"><div class="stat-label">夏普比率</div><div class="stat-val down">0.09</div></div>
+        </div>
+      </div>
+      <div class="etf-body">
+        <table class="holdings">
+          <thead><tr><th>持仓</th><th class="right">仓位</th><th class="right">持仓盈亏</th><th class="right">今日盈亏</th></tr></thead>
+          <tbody>
+            <tr><td><div class="hname">通信ETF国泰</div><div class="hweight-bar"><div class="hweight-fill" style="width:100%"></div></div></td><td class="right num">21.90%</td><td class="right num up">+2.58%</td><td class="right num up">+7,680</td></tr>
+            <tr><td><div class="hname">澜起科技</div><div class="hweight-bar"><div class="hweight-fill" style="width:58%"></div></div></td><td class="right num">12.61%</td><td class="right num down">-2.09%</td><td class="right num up">+1,014</td></tr>
+            <tr><td><div class="hname">红星发展</div><div class="hweight-bar"><div class="hweight-fill" style="width:58%"></div></div></td><td class="right num">12.67%</td><td class="right num up">+1.22%</td><td class="right num up">+2,356</td></tr>
+            <tr><td><div class="hname">清溢光电</div><div class="hweight-bar"><div class="hweight-fill" style="width:46%"></div></div></td><td class="right num">10.18%</td><td class="right num up">+6.37%</td><td class="right num up">+3,630</td></tr>
+            <tr><td><div class="hname">华虹宏力</div><div class="hweight-bar"><div class="hweight-fill" style="width:46%"></div></div></td><td class="right num">10.05%</td><td class="right num down">-5.85%</td><td class="right num down">-9,500</td></tr>
+            <tr><td><div class="hname">君正股份</div><div class="hweight-bar"><div class="hweight-fill" style="width:46%"></div></div></td><td class="right num">9.97%</td><td class="right num down">-1.09%</td><td class="right num up">+4,298</td></tr>
+            <tr><td><div class="hname">宏景科技</div><div class="hweight-bar"><div class="hweight-fill" style="width:40%"></div></div></td><td class="right num">8.80%</td><td class="right num up">+7.79%</td><td class="right num up">+7,016</td></tr>
+            <tr><td><div class="hname">国瓷材料</div><div class="hweight-bar"><div class="hweight-fill" style="width:39%"></div></div></td><td class="right num">8.44%</td><td class="right num down">-0.90%</td><td class="right num up">+360</td></tr>
+            <tr><td><div class="hname">德明利</div><div class="hweight-bar"><div class="hweight-fill" style="width:18%"></div></div></td><td class="right num">4.03%</td><td class="right num down">-0.88%</td><td class="right num up">+966</td></tr>
+          </tbody>
+        </table>
+        <div class="side-col">
+          <div class="spark-box">
+            <div class="spark-box-head"><span>净值曲线 08-07→08-14</span><span class="up">1.008</span></div>
+            <svg viewBox="0 0 300 80" width="100%" height="70" preserveAspectRatio="none">
+              <polyline points="0,43.4 60,68.2 120,75 180,20.8 240,43.4 300,5" fill="none" stroke="#E0524F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="analysis-box">
+            <div class="a-title">本周消息面</div>
+            <p><b>华虹宏力</b>是本周全市场半导体板块调整的重灾区之一：受"存储价格见顶预期"、AI资本开支可持续性遭重估、费城半导体指数连续下挫等多重因素影响，叠加前期涨幅过大后的主力资金撤离，股价自7月高点已累计下跌超20%，今日再跌超8%，单票拖累组合<b class="down">-9,500</b> 元。<b>清溢光电</b>（半导体材料）、<b>宏景科技</b>（IT服务）逆势走强，部分对冲了跌幅。</p>
+            <div class="news-tag">半导体高位回调</div><div class="news-tag">存储价格担忧</div><div class="news-tag">AI硬件叙事降温</div>
+          </div>
+        </div>
+      </div>
+      <div class="verdict-strip">
+        <span class="verdict-label">点评</span>
+        <span class="verdict-text">持仓混入ETF、半导体权重集中偏高，本周踩中板块回调，各项指标均偏弱，排名第四。</span>
+      </div>
+    </div>
+
+    <!-- 朱投 -->
+    <div class="etf-card">
+      <div class="etf-head">
+        <div class="etf-name-block">
+          <div class="rank-badge" style="color:var(--up);border-color:rgba(224,82,79,0.35);">5</div>
+          <div><div class="etf-name">三林 etf 朱投</div><div class="etf-tag">4 只持仓 · 期间发生9次调仓 · 新易盛占比53.77%</div></div>
+        </div>
+        <div class="etf-stats">
+          <div class="stat"><div class="stat-label">收益率</div><div class="stat-val down">-0.01%</div></div>
+          <div class="stat"><div class="stat-label">胜率</div><div class="stat-val">40.00%</div></div>
+          <div class="stat"><div class="stat-label">最大回撤</div><div class="stat-val down">4.63%</div></div>
+          <div class="stat"><div class="stat-label">夏普比率</div><div class="stat-val flat-c">0.00</div></div>
+        </div>
+      </div>
+      <div class="etf-body">
+        <table class="holdings">
+          <thead><tr><th>持仓</th><th class="right">仓位</th><th class="right">持仓盈亏</th><th class="right">今日盈亏</th></tr></thead>
+          <tbody>
+            <tr><td><div class="hname">新易盛</div><div class="hweight-bar"><div class="hweight-fill" style="width:100%;background:var(--up);"></div></div></td><td class="right num up">53.77%</td><td class="right num up">+2.20%</td><td class="right num up">+21,816</td></tr>
+            <tr><td><div class="hname">健麾信息</div><div class="hweight-bar"><div class="hweight-fill" style="width:52%"></div></div></td><td class="right num">27.99%</td><td class="right num up">+10.04%</td><td class="right num up">+11,312</td></tr>
+            <tr><td><div class="hname">云南锗业</div><div class="hweight-bar"><div class="hweight-fill" style="width:32%"></div></div></td><td class="right num">17.27%</td><td class="right num down">-4.27%</td><td class="right num up">+2,346</td></tr>
+            <tr><td><div class="hname">科陆电子</div><div class="hweight-bar"><div class="hweight-fill" style="width:2%"></div></div></td><td class="right num">0.05%</td><td class="right num down">-4.94%</td><td class="right num down">-13</td></tr>
+          </tbody>
+        </table>
+        <div class="side-col">
+          <div class="spark-box">
+            <div class="spark-box-head"><span>净值曲线 08-06→08-14</span><span class="flat-c">1.000</span></div>
+            <svg viewBox="0 0 300 80" width="100%" height="70" preserveAspectRatio="none">
+              <polyline points="0,27.8 50,23.3 100,75 150,64.4 200,37 250,59.8 300,5" fill="none" stroke="#E0524F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="analysis-box">
+            <div class="a-title">调仓记录 · 08-06 → 08-12</div>
+            <p>共9次操作：先后建仓科陆电子/健麾信息/新易盛，后减健麾信息、加国投白银LOF、减新易盛，08-12又清空国投白银LOF、换入云南锗业。<b>这只组合并非"持有不动"，收益差异中混杂了择时/调仓的影响，不宜与另外4只组合完全同口径比较。</b></p>
+            <p><b>新易盛</b>同属CPO/光模块板块，本周同样经历传闻扰动后企稳，境外收入占比超96%，是1.6T光模块龙头之一。<b>云南锗业</b>本周小金属板块整体分化中走弱，浮亏-4.27%。</p>
+            <div class="news-tag">中途调仓9次</div><div class="news-tag">单票占比过半</div><div class="news-tag">CPO板块波动</div>
+          </div>
+        </div>
+      </div>
+      <div class="verdict-strip">
+        <span class="verdict-label">点评</span>
+        <span class="verdict-text">唯一亏损、回撤最大、单票占比超五成，且样本被调仓行为干扰，风险<b class="down">全场最高</b>，排名第五。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: MARKET CONTEXT -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="section-index">02</span><h2>本周市场背景</h2></div>
+      <div class="section-desc">2026-08-10 至 08-14，A股整体走势与主线板块</div>
+    </div>
+    <div class="market-grid">
+      <div class="market-card">
+        <h3>大盘：超跌反弹分化</h3>
+        <p>上周（8/3-8/7）三大指数强势收红，上证指数累计涨2.81%报3940点，创业板指涨6.55%创近半年最大周涨幅。本周延续超跌反弹逻辑，8/10上证指数五连阳冲击4000点，但"消费强、科技弱"分化明显，AI算力、光模块等前期领涨方向早盘一度大幅跳水。</p>
+        <p>券商观点普遍提示：本周科技股在连续反弹后出现分化，需警惕中报验证期业绩不及预期的个股补跌风险。</p>
+      </div>
+      <div class="market-card">
+        <h3>板块：光模块传闻反复</h3>
+        <p>8/5前后，市场流传"美国FCC拟起草禁令、限制中国光模块进口"的消息，中际旭创、新易盛、天孚通信、剑桥科技等CPO概念股当日一度跌超6%-13%，随后因传闻未被证实、资金迅速回补而大幅反弹，全周呈剧烈"深V"走势。本周持仓中<b>天孚通信、新易盛、剑桥科技、永鼎股份</b>均直接受此影响。</p>
+      </div>
+      <div class="market-card">
+        <h3>板块：半导体高位承压</h3>
+        <p>费城半导体指数连续5个交易日下挫、累计跌约15%，AI硬件交易降温叠加存储价格见顶预期，带动华虹宏力、中芯国际等高位股大幅回调，华虹宏力单周振幅居前，是本周表现最差的重点标的之一，直接拖累<b>大蛮</b>组合。</p>
+      </div>
+      <div class="market-card">
+        <h3>板块：小金属（钨）领涨</h3>
+        <p>中钨高新受益于半年报净利润同比暴增261%-325%、AI拉动PCB钻针需求扩产双重利好，8/10单日大涨8.64%，带动翔鹭钨业等同板块个股联动上行，是<b>王婷、错觉</b>两组合本周的正向驱动之一。</p>
+      </div>
+      <div class="market-card">
+        <h3>板块：有色（金铜）高位回调</h3>
+        <p>紫金矿业在自身基本面强劲（一季度净利润同比+97.5%）的背景下，8/11因金铜价格短期高位获利了结、主力资金单日净流出超18亿元，股价大跌6.4%，是<b>错觉</b>组合本周最大的拖累项，但机构一致目标价仍显著高于现价，短期承压不改长期逻辑。</p>
+      </div>
+      <div class="market-card">
+        <h3>小结：分化是本周主线</h3>
+        <p>大盘整体延续修复行情，但"强者恒强、topic轮动快"特征明显——同一周内，光模块传闻、半导体回调、小金属走强、有色获利了结几乎同时发生，5只组合的表现差异，本质上是各自持仓在这几条主线中"踩对"或"踩空"的比例不同。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: COMPARISON -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="section-index">03</span><h2>横向对比 · 综合排名</h2></div>
+      <div class="section-desc">按夏普比率、最大回撤、胜率综合评定，收益率仅供参考</div>
+    </div>
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>排名 / 组合</th>
+            <th class="right">收益率</th>
+            <th class="right">胜率</th>
+            <th class="right">最大回撤</th>
+            <th class="right">夏普比率</th>
+            <th class="right">持仓特征</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name"><span class="medal medal-1">1</span>杨斌</td>
+            <td class="right up">+2.69%</td>
+            <td class="right">66.67%</td>
+            <td class="right down best">0.72%</td>
+            <td class="right up best">0.37</td>
+            <td class="right" style="font-family:inherit;font-size:12.5px;color:var(--text-dim);">9只 · 通信设备35%</td>
+          </tr>
+          <tr>
+            <td class="name"><span class="medal medal-2">2</span>王婷</td>
+            <td class="right up">+2.70%</td>
+            <td class="right best">71.43%</td>
+            <td class="right down">2.06%</td>
+            <td class="right up">0.21</td>
+            <td class="right" style="font-family:inherit;font-size:12.5px;color:var(--text-dim);">7只 · 行业分散</td>
+          </tr>
+          <tr>
+            <td class="name"><span class="medal medal-3">3</span>错觉</td>
+            <td class="right up best">+2.98%</td>
+            <td class="right">50.00%</td>
+            <td class="right down">3.33%</td>
+            <td class="right up">0.19</td>
+            <td class="right" style="font-family:inherit;font-size:12.5px;color:var(--text-dim);">8只 · 两票占38%</td>
+          </tr>
+          <tr>
+            <td class="name"><span class="medal medal-4">4</span>大蛮</td>
+            <td class="right up">+0.84%</td>
+            <td class="right">44.44%</td>
+            <td class="right down">2.26%</td>
+            <td class="right up">0.09</td>
+            <td class="right" style="font-family:inherit;font-size:12.5px;color:var(--text-dim);">9只(含ETF) · 半导体重</td>
+          </tr>
+          <tr>
+            <td class="name"><span class="medal medal-5">5</span>朱投</td>
+            <td class="right down worst">-0.01%</td>
+            <td class="right worst">40.00%</td>
+            <td class="right down worst">4.63%</td>
+            <td class="right flat-c worst">0.00</td>
+            <td class="right" style="font-family:inherit;font-size:12.5px;color:var(--text-dim);">4只 · 单票54%+曾调仓</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 4: RECOMMENDATIONS -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="section-index">04</span><h2>操作建议</h2></div>
+      <div class="section-desc">按组合分别给出，仅供参考，不构成投资建议</div>
+    </div>
+    <div class="reco-grid">
+      <div class="reco-card">
+        <h4>杨斌 / 王婷 — 维持观察</h4>
+        <p>两组合风险调整后表现最佳，走势稳健、行业分布合理，<b>建议暂不调仓</b>，继续观察2-4周验证排名稳定性。</p>
+      </div>
+      <div class="reco-card">
+        <h4>错觉 — 关注集中度</h4>
+        <p>紫金矿业+中钨高新合计近38%仓位，紫金矿业本周浮亏-6%且仍处高位回调中。可考虑<b>适度降低紫金矿业权重</b>，向天孚通信等强势方向再平衡。</p>
+      </div>
+      <div class="reco-card">
+        <h4>大蛮 — 盯紧华虹宏力</h4>
+        <p>华虹宏力浮亏-5.85%、今日单日再跌8.57%，半导体板块调整趋势未完全明朗，若继续走弱<b>建议考虑减仓或设置止损位</b>。</p>
+      </div>
+      <div class="reco-card urgent">
+        <h4>朱投 — 优先处理，风险最高</h4>
+        <p>新易盛占比高达53.77%，单票集中度风险突出；且组合期间已发生9次调仓，样本不纯。<b>建议核实调仓是否为主动操作</b>，并将新易盛仓位降至35%左右，分散资金到组合内其他标的。</p>
+      </div>
+    </div>
+    <div class="closing">
+      <p>五只组合仅运行 1-2 周，样本量仍偏小，本次排名更多反映的是<b>本周板块轮动下各组合的暴露方向</b>，而非长期选股能力的定论。建议将本次结论作为起点，继续跟踪 <b>2-4 周</b>，重点验证：① 杨斌 / 王婷 的稳健表现能否持续；② 错觉的集中度风险是否兑现；③ 朱投在调仓行为明确、仓位再平衡后的表现是否改善。届时再考虑是否向表现更优的组合倾斜资金。</p>
+    </div>
+  </div>
+
+  <footer>三林ETF模拟交易组合 · 数据截至 2026-08-14 收盘 · 本页仅为个人持仓复盘整理，不构成投资建议</footer>
+</div>
+</body>
+</html>
